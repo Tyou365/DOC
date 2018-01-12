@@ -1,0 +1,5 @@
+GET请求：（注意："&"符号前要加"\"符号）
+curl http://10.2.94.182:80/icscorp/inner/rentloan/contract?certId=341622199001059874&certType=Ind01&name=aaa&rentalCompanyCode=FH01&cityCode=110000
+
+POST请求：
+curl -l -H "Content-type: application/json" -X POST -d '{"certId":"00000000000000000000","certType":"Ind01","cityCode":"110000","customerName":"aaa","rentalCompanyCode":"FH01"}' http://localhost:8080/rentLoan/query/contract.do
