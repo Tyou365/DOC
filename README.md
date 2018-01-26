@@ -9,3 +9,6 @@ https://www.cnblogs.com/xiaofei1208/p/7077733.html
 
 从头开始搭建一个dubbo+zookeeper平台
 https://www.cnblogs.com/ASPNET2008/p/5622005.html
+
+java学习--hasNext()与next()
+http://blog.csdn.net/jbfsdzpp/article/details/41548521?locationNum=7
