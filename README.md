@@ -1,2 +1,11 @@
 # Linux
 linux知识学习
+
+攻破JAVA NIO技术壁垒
+http://www.importnew.com/19816.html
+
+dubbo与zookeeper的关系
+https://www.cnblogs.com/xiaofei1208/p/7077733.html
+
+从头开始搭建一个dubbo+zookeeper平台
+https://www.cnblogs.com/ASPNET2008/p/5622005.html
