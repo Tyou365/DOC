@@ -27,6 +27,7 @@ public class BaseHttpClient implements IHttpClient {
 
     @Override
     public <T> T doPost(String jsonParam, String url, Class<T> clazz) throws RuntimeException {
+        logger.info("HttpClient URL: {}, Parameters: {}", url, jsonParam);
         logger.info("访问URL:" + url);
 
         CloseableHttpClient httpClient = null;
