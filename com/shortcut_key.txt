@@ -1,0 +1,58 @@
+1、文本编辑
+    删除    ctr + y
+    复制    ctr + D
+2、智能提示
+    提示    ctr + space
+    智能提示 ctr + shift + space
+    完成当前语句  ctr + shift + enter
+    建议提示为参数  ctr + alt + P
+    对代码重新排列格式 Ctrl + Alt + L
+    对imports进行优化 Ctrl + Alt + O
+3、位置定位
+    定位到下一个或上一个错误 F2 / Shift + F2
+    定位文件头   ctr+G    （定位到文件行数）
+    定位文件尾   ctr+G
+    定位到代码块开始  ctr + [
+    定位到代码块结束  ctr + ]
+    回到最近的窗口      F12
+    回到之前的文件  alt + left
+    回到之后的文件   alt + right
+    定位到最后编辑位置  Ctrl + Shift + Backspace
+    从tool window或其他window切换到文件编辑    esc
+    关闭最近打开的窗口    shift + esc
+4、类、方法、文件定位
+    查找类    ctr + N
+    查找文件  Ctrl + Shift + N
+    符号定位     Ctrl + Alt + Shift + N
+    查看文件结构   ctrl + F12
+    最近打开的文件  ctr + E
+    定位下一个方法 alt + down
+    定位上一个方法  alt + up
+    查看方法参数信息  ctr + p
+    查看方法、类的doc ctr + Q
+5、类、方法的结构查看、定位
+    跳到类或方法的声明         ctr + B
+    定位到类的父类、接口     ctr + U
+    查看类的继承结构             ctr + H
+    查看方法的继承结构          ctr + shift + H
+    查看类或方法被调用情况  ctr + alt +H
+    原地参看类、方法的声明 Ctrl + Shift + I
+6、运行与调试
+    Compile and Run
+        Ctrl + F9 Make project (compile modifed and dependent)
+        Ctrl + Shift + F9 Compile selected file, package or module
+        Alt + Shift + F10 Select configuration and run
+        Alt + Shift + F9 Select configuration and debug
+        Shift + F10 Run
+        Shift + F9 Debug
+        Ctrl + Shift + F10 Run context configuration from editor
+    Debugging
+        F8 Step over
+        F7 Step into
+        Shift + F7 Smart step into
+        Shift + F8 Step out
+        Alt + F9 Run to cursor
+        Alt + F8 Evaluate expression
+    F9 Resume program
+        Ctrl + F8 Toggle breakpoint
+        Ctrl + Shift + F8 View breakpoints

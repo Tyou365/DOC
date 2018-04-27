@@ -1,0 +1,28 @@
+ORACLE的临时表在应用系统中有很大的作用，它可以让用户只能够操作各自的数据中而互不干扰，不用担心会破坏或影响其他SESSION/TRANSACTION的数据，这也是数据安全的一种解决方法。 
+临时表分为SESSION、TRANSACTION两种，SESSION级的临时表数据在整个SESSION都存在，直到结束此次 SESSION；而TRANSACTION级的临时表数据在TRANACTION结束后消失，即COMMIT/ROLLBACK或结束SESSION都会 清除TRANACTION临时表数据。 
+两种临时表的语法： 
+create global temporary table 临时表名 on commit preserve|delete rows  用preserve时就是SESSION级的临时表，用delete就是TRANSACTION级的临时表。
+    
+一、SESSION级临时表（回话级临时表）
+create global temporary table temp_tbl(
+  col_a varchar2(30)
+)  on commit preserve rows;
+特点：
+插入数据：insert into temp_tbl values('test session table')
+然后commit。
+再查询select * from temp_tbl。会查出数据。
+数据库连接断开，再重新连接上，再次查询select * from temp_tbl就没有数据了。
+说明连接断开后，临时表中的数据就会被清空。
+一次数据库连接就是一次会话，因此如果项目使用了连接池的话，会话是不会断的，所以要注意。
+
+
+二、TRANSACTION级临时表（事务级临时表）
+create global temporary table temp_tbl(
+  col_a varchar2(30)
+)on commit delete rows;
+特点：
+插入数据：insert into temp_tbl values('test session table')
+先不commit，查询select * from temp_tbl。会查出数据。
+进行commit，再查询select * from temp_tbl，就没有数据了（数据被清空了）。
+说用commit结束之后，便是事务结束，临时表中的数据就会被清空。
+配个事务级别的临时表，spring中使用@Transactional。
