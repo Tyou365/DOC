@@ -1,0 +1,195 @@
+<project name="risk_info" default="main" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:pafa="antlib:com.pingan.pafa.pizza.deploy.ant">
+
+	<!-- some variables used -->
+	<property name="lib.dir" value="lib" />
+	<property name="build.dir" value="build" />
+	<property file="build.properties" />
+
+	<!-- variables maybe different among projects -->
+	<property name="src" value="src/main" />
+	<property name="test" value="src/test" />
+	<property name="src.dir" value="${src}/java" />
+	<property name="src.resources.dir" value="${src}/resources" />
+	<property name="test.dir" value="${test}/java" />
+	<property name="test.resources.dir" value="${test}/resources" />
+	<property name="class" value="${build.dir}/classes" />
+	<property name="test.class" value="${build.dir}/test" />
+
+	<!-- variables will be set by Auto Deploy Tool -->
+	<property name="target.dir" value="target" />
+
+	<path id="lib.path.id">
+		<ivy:resources file="ivy.xml" />
+	</path>
+	<path id="run.path.id">
+		<path refid="lib.path.id" />
+		<path location="${class}" />
+	</path>
+	<path id="test.classpath">
+		<!-- lib & build/test -->
+		<path location="${test.class}" />
+		<path refid="run.path.id" />
+	</path>
+
+	<target name="init" description="init dir">
+		<delete dir="${build.dir}">
+		</delete>
+		<delete dir="${target.dir}" />
+		<mkdir dir="${build.dir}" />
+		<mkdir dir="${target.dir}" />
+	</target>
+
+	<!-- ================================= 
+          target: retrieve              
+         ================================= -->
+	<target name="retrieve" description="--> retrieve dependencies to dir lib. NO NEED USE!">
+		<delete dir="${lib.dir}">
+		</delete>
+		<mkdir dir="${lib.dir}" />
+		<copy todir="${lib.dir}">
+			<ivy:resources file="ivy.xml" />
+		</copy>
+	</target>
+
+	<!-- ================================= 
+          target: resolve              
+         ================================= -->
+	<target name="resolve" description="--> resolve dependencies with ivy. If dependencies not in cache will download from repository">
+		<ivy:configure url="${ivy.config.url}/ivyconf.xml" override="true" />
+		<ivy:resolve />
+	</target>
+
+	<!-- ================================= 
+	      target: compile            
+	     ================================= -->
+	<target name="compile" depends="resolve" description="--> generates class files">
+		<delete dir="${class}" />
+		<mkdir dir="${class}" />
+		<delete dir="${test.class}" />
+		<mkdir dir="${test.class}" />
+		<javac srcdir="${src.dir}" destdir="${class}" classpathref="lib.path.id" includeAntRuntime="false" target="1.6" source="1.6" debug="true" encoding="utf8" />
+		<javac srcdir="${test.dir}" destdir="${test.class}" classpathref="run.path.id" includeAntRuntime="false" target="1.6" source="1.6" debug="true" encoding="utf8" />
+		<copy todir="${class}">
+			<fileset dir="${src.dir}">
+				<exclude name="**/.svn" />
+				<exclude name="**/*.java" />
+			</fileset>
+			<fileset dir="${src.resources.dir}">
+				<exclude name="**/.svn" />
+				<exclude name="**/*.java" />
+			</fileset>
+		</copy>
+		<copy todir="${test.class}">
+			<fileset dir="${test.dir}">
+				<exclude name="**/.svn" />
+				<exclude name="**/*.java" />
+			</fileset>
+			<fileset dir="${test.resources.dir}">
+				<exclude name="**/.svn" />
+				<exclude name="**/*.java" />
+			</fileset>
+		</copy>
+	</target>
+
+	<!-- ================================= 
+		  target: package            
+		 ================================= -->
+	<target name="package" depends="compile" description="--> generates a package file">
+		<mkdir dir="${target.dir}" />
+		<jar jarfile="${target.dir}/${ivy.module}.jar">
+			<fileset dir="${class}">
+			</fileset>
+		</jar>
+	</target>
+
+	<target name="check-passwordfile">
+		<condition property="fileIsExists">
+			<and>
+				<available file="${pafa5.deploy.password.file}" />
+			</and>
+		</condition>
+	</target>
+	<target name="init-userandpass" unless="fileIsExists" depends="check-passwordfile">
+		<input addproperty="user">请输入在线管控平台用户ID：</input>
+		<input addproperty="password">请输入在线管控平台密码：</input>
+	</target>
+	<target name="pafa5-init" depends="init-userandpass">
+		<pafa:setting user="${user}" password="${password}" adminURL="${pafa5.pizza.admin.url}" projectId="${pafa5.target.project}" passwordFile="${pafa5.deploy.password.file}" />
+	</target>
+
+	<target name="pafa5-upload" depends="package,pafa5-init">
+		<property name="pizza.dir" value="${target.dir}/paconfigs" />
+		<delete dir="${pizza.dir}" />
+		<mkdir dir="${pizza.dir}" />
+		<copy todir="${pizza.dir}">
+			<fileset dir="${test.resources.dir}/${pafa5.deploy.pizzadir}">
+				<include name="**/*.properties" />
+				<include name="**/*.xml" />
+			</fileset>
+		</copy>
+		<!-- deploy sar -->
+		<pafa:upload targetGroup="sar" file="${pizza.dir}/sar/${sar.name}.properties" />
+		<pafa:upload targetGroup="lib" file="${target.dir}/${sar.name}.jar" />
+	</target>
+
+	<target name="pafa5-restartup" depends="pafa5-init">
+		<!-- commandName: restartup/startup/shutdown -->
+		<!-- targetSAR为空时，指令目标为papp -->
+		<pafa:command targetPApp="${pafa5.target.papp}" targetSAR="${sar.name}" commandName="restartup" />
+	</target>
+
+	<target name="pafa5-startup" depends="pafa5-init">
+		<!-- commandName: restartup/startup/shutdown -->
+		<pafa:command targetPApp="${pafa5.target.papp}" targetSAR="${sar.name}" commandName="startup" />
+	</target>
+
+	<target name="pafa5-shutdown" depends="pafa5-init">
+		<!-- commandName: restartup/startup/shutdown -->
+		<pafa:command targetPApp="${pafa5.target.papp}" targetSAR="${sar.name}" commandName="shutdown" />
+	</target>
+
+	<target name="pafa5-deploy" depends="package,pafa5-upload,pafa5-restartup">
+	</target>
+
+	<!-- ================================= 
+          target: install              
+         ================================= -->
+	<target name="ivy-publish" depends="resolve" description="--> install package to local repository">
+		<ivy:configure url="${ivy.config.url}/deploy.xml" override="true" />
+		<copy file="${target.dir}/${ivy.module}.jar" tofile="${target.dir}/jars/${ivy.module}.jar" />
+		<ivy:publish resolver="sftp-resolver" pubrevision="${ivy.revision}" artifactsPattern="${target.dir}/[type]s/[artifact].[ext]" forcedeliver="true" status="release" publishivy="false" overwrite="true" />
+	</target>
+
+	<!-- ================================= 
+          target: ivy-report              
+         ================================= -->
+	<target name="ivy-report" depends="resolve" description="--> generates a report of dependencies">
+		<ivy:report todir="${target.dir}/ivy-report" />
+	</target>
+
+	<!-- ================================= 
+          target: clean              
+         ================================= -->
+	<target name="clean" description="--> clean the project">
+		<delete includeemptydirs="true">
+			<fileset dir="${basedir}">
+				<include name="lib/**" />
+				<include name="build/**" />
+				<include name="target/**" />
+				<include name="junit*.properties" />
+			</fileset>
+		</delete>
+	</target>
+
+	<!-- ================================= 
+          target: clean-cache              
+         ================================= -->
+	<target name="clean-cache" description="--> clean the ivy cache">
+		<ivy:cleancache />
+	</target>
+
+	<!-- main -->
+	<target name="main" depends="package">
+	</target>
+
+</project>
