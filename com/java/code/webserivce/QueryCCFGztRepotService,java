@@ -1,0 +1,379 @@
+package com.amarsoft.impl.szpab.interfaces.instance;
+
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.xml.namespace.QName;
+
+import com.alibaba.fastjson.JSON;
+import com.amarsoft.impl.CodeLibraryService;
+import com.amarsoft.impl.szpab.ei.EnvTools;
+import com.amarsoft.impl.szpab.interfaces.instance.queryCCFGztReport.EducationDTO;
+import com.amarsoft.impl.szpab.interfaces.instance.queryCCFGztReport.GZT6B010101Data;
+import com.amarsoft.impl.szpab.interfaces.instance.queryCCFGztReport.XLinfo;
+import org.apache.axis.client.Call;
+import org.apache.axis.client.Service;
+import org.apache.axis.encoding.XMLType;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+
+
+
+
+
+import com.amarsoft.account.util.StringTools;
+import com.amarsoft.are.sql.Transaction;
+import com.amarsoft.are.util.DataConvert;
+import com.amarsoft.impl.szpab.utils.SqlUtil;
+import com.pingan.rcpm.util.DBUtils;
+
+@SuppressWarnings({ "unchecked", "rawtypes" })
+public class QueryCCFGztRepotService {
+
+	private static Log logger = LogFactory.getLog(QueryCCFGztRepotService.class);
+
+	/**
+	 * 下边的3个字段要在配置表中配置SZPAB_EI_ENV.properties
+	 */
+	private static String CCF_SOAP_URL = EnvTools.getProperty("CCF.GZT_URL");
+	private static String CCF_SECURITY_USERNAME = EnvTools.getProperty("CCF.SECURITY_PRINCIPAL_GZT");
+	private static String CCF_SECURITY_PASSWORD = EnvTools.getProperty("CCF.SECURITY_CREDENTIALS_GZT");
+
+
+	private static final String INTERFACE_ID = "00101";
+	private static final String METHOD_NAME = "server";
+	private static final String SOURCECD = "5";
+	private static final String REPORT_TYPE = "2";
+
+
+	public static Map query(Map<String, String> queryConditionMap,Transaction sqlca) {
+		Map result = new HashMap();
+
+		try {
+			// 先查询数据库获取学历信息
+			result = queryDataFromDB(queryConditionMap.get("NAME"), queryConditionMap.get("ID_NO"), sqlca);
+			// 如果有信息则直接返回
+			if ((Boolean) result.get("FLAG")) {
+				logger.info("国政通学历查询结果:" + result);
+				return result;
+			}
+
+			if(!CodeLibraryService.getSwitchOn( "queryCcfGzt")){//国政通查询开关
+				logger.info("国政通学历查询开关关闭。");
+				emetyData(result);
+
+			}else{
+				// 获取国政通帐号密码
+				String USER_NAME = sqlca.getString("select trim(attribute2) from code_library where codeno = 'GZT' and itemno = 'GZT'");//用户名
+				String PASSWORD = sqlca.getString("select trim(attribute1) from code_library where codeno = 'GZT' and itemno = 'GZT'");//用户密码
+				String QUERY_TYPE = sqlca.getString("select trim(attribute3) from code_library where codeno = 'GZT' and itemno = 'GZT'");//查询类型
+				queryConditionMap.put("USER_NAME",USER_NAME);
+				queryConditionMap.put("PASSWORD",PASSWORD);
+				queryConditionMap.put("QUERY_TYPE",QUERY_TYPE);
+				// 数据库没有查询到信息，则通过webservice查询
+
+				result = queryDataFromWebService(queryConditionMap);
+			}
+
+		} catch (Exception e) {
+			emetyData(result);
+			logger.error("国政通学历查询异常:" + e);
+
+		}
+		logger.info("国政通学历查询结果:" + result);
+		return result;
+	}
+
+	/**
+	 * 通过WebService查询学历信息
+	 *
+	 * @param queryConditionMap
+	 * @return
+	 */
+	private static Map queryDataFromWebService(Map<String, String> queryConditionMap) {
+		Map result = new HashMap();
+		Transaction sqlca = null;
+		try {
+			// 获取数据库链接
+			sqlca = StringTools.getSqlca();
+			String ref_id = com.amarsoft.are.sql.DBFunction.getSerialNo("GZT_DEGREE", "serialno", sqlca);
+			logger.info("国政通学webservice历查询REF_ID:" + ref_id);
+			queryConditionMap.put("REF_ID", ref_id);
+			JSONObject jsonObj = initQueryParam(queryConditionMap);
+			logger.info("国政通学webservice历查询请求参数:" + jsonObj);
+			String jsonStr = callWebServiceInterface(jsonObj);
+			result = jsonStrToMap(jsonStr,queryConditionMap.get("QUERY_TYPE"));// str转Map
+		} catch (Exception e) {
+			emetyData(result);
+			logger.error("国政通学历webservice查询异常:" + e);
+		}
+
+		// 数据入库
+		if ((Boolean) result.get("FLAG")) {
+			logger.info("国政通学webservice查询结果保存");
+			insertData(result, sqlca);
+		}
+
+		return result;
+	}
+
+	private static void emetyData(Map result) {
+		result.put("REF_ID", "");
+		result.put("STUDY_STYLE", "");
+		result.put("CONDITION_NO", "");
+		result.put("IDENTITY_CARD", "");
+		result.put("ENROL_DATE", "");
+		result.put("STUDY_RESULT", "");
+		result.put("USER_NAME", "");
+		result.put("GRADUATE_INSTITUTIONS", "");
+		result.put("SPECIALITY", "");
+		result.put("EDUCATION_DEGREE", "");
+		result.put("GRADUATE_TIME", "");
+		result.put("FLAG", false);
+	}
+
+	private static void insertData(Map param, Transaction sqlca) {
+		logger.info("国政通学历数据插入GZT_DEGREE表,参数:" + param);
+
+		String sSql = "insert into GZT_DEGREE(SERIALNO,CONDITION_NO,USER_NAME,IDENTITY_CARD,GRADUATE_INSTITUTIONS,EDUCATION_DEGREE"
+				+ ",ENROL_DATE,SPECIALITY,GRADUATE_TIME,STUDY_RESULT,STUDY_STYLE,CREATE_DATE)values(?,?,?,?,?,?,?,?,?,?,?,sysdate)";
+		PreparedStatement pst = null;
+		try {
+			pst = sqlca.conn.prepareStatement(sSql);
+			pst.setString(1, DataConvert.toString((String) param.get("REF_ID")));
+			pst.setString(2, DataConvert.toString((String) param.get("CONDITION_NO")));
+			pst.setString(3, DataConvert.toString((String) param.get("USER_NAME")));
+			pst.setString(4, DataConvert.toString((String) param.get("IDENTITY_CARD")));
+			pst.setString(5, DataConvert.toString((String) param.get("GRADUATE_INSTITUTIONS")));
+			pst.setString(6, DataConvert.toString((String) param.get("EDUCATION_DEGREE")));
+			pst.setString(7, DataConvert.toString((String) param.get("ENROL_DATE")));
+			pst.setString(8, DataConvert.toString((String) param.get("SPECIALITY")));
+			pst.setString(9, DataConvert.toString((String) param.get("GRADUATE_TIME")));
+			pst.setString(10, DataConvert.toString((String) param.get("STUDY_RESULT")));
+			pst.setString(11, DataConvert.toString((String) param.get("STUDY_STYLE")));
+			pst.execute();
+			sqlca.conn.commit();
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.error("国政通学历数据插入GZT_DEGREE表失败 ：" + e);
+			if (null != sqlca && null != sqlca.conn) {
+				try {
+					sqlca.conn.rollback();
+				} catch (SQLException e1) {
+					logger.error("GZT_DEGREE回滚异常", e1);
+				}
+			}
+		} finally {
+			if (pst != null)
+				try {
+					pst.close();
+				} catch (SQLException e) {
+				}
+			DBUtils.closeQuietly(sqlca);
+
+			logger.info("国政通学历数据插入GZT_DEGREE表操作完成");
+		}
+
+	}
+
+	private static Map jsonStrToMap(String jsonStr,String queryType) {
+		Map result=new HashMap();
+		if("1B010101".equals(queryType)){
+			result = (Map) JSON.parse(jsonStr);
+			String STATUS_CD = (String) result.get("STATUS_CD");
+			if ("0".equals(STATUS_CD)) {
+				result.put("FLAG", true);
+			} else {
+				emetyData(result);
+			}
+		}else if ("6B010101".equals(queryType)){
+			handle6B010101Data(jsonStr,result);
+		}else{
+			emetyData(result);
+		}
+		return result;
+	}
+
+	/**
+	 * QUERY_TYPE为6B010101报文数据解析
+	 * @param jsonStr
+	 * @param result
+	 */
+	private static void handle6B010101Data(String jsonStr,Map result) {
+		GZT6B010101Data gzt6B010101 = com.alibaba.fastjson.JSONObject.parseObject(jsonStr,GZT6B010101Data.class);
+		EducationDTO educationdto = gzt6B010101.getEDUCATIONDTO();
+		List<XLinfo> xlinfos = educationdto.getXlinfos();
+
+		if(xlinfos.isEmpty()){//学历list为空则返回空
+			emetyData(result);
+			return;
+		}
+
+		int index =0;
+		if(xlinfos.size()>1){
+			index = getIndex(xlinfos);//获取最高学历信息
+		}
+
+		XLinfo xlinfo=xlinfos.get(index);
+
+		result.put("REF_ID", gzt6B010101.getREF_ID());
+		result.put("STUDY_STYLE", xlinfo.getStudyStyle());
+		result.put("CONDITION_NO", educationdto.getConditionNO());
+		result.put("IDENTITY_CARD", educationdto.getIdentityInput());
+		result.put("ENROL_DATE", "");
+		result.put("STUDY_RESULT", xlinfo.getStudyResult());
+		result.put("USER_NAME", educationdto.getUserName());
+		result.put("GRADUATE_INSTITUTIONS", xlinfo.getGraduateInstitutions());
+		result.put("SPECIALITY", "");
+		result.put("EDUCATION_DEGREE", xlinfo.getEducationDegree());
+		result.put("GRADUATE_TIME", xlinfo.getGraduateTime());
+		result.put("FLAG", true);
+
+	}
+
+	/**
+	 * 学历等级比较，获取list索引
+	 * @param xlinfos
+	 * @return
+	 */
+	private static int getIndex(List<XLinfo> xlinfos) {
+		int index =0;
+		//数组中的值表示对应的list索引，初始值为-1
+		//第一个-1表示“博士研究生”学历的信息在xlinfos的第几位，第二个-1表示“硕士研究生”学历的信息在xlinfos的第几位，以此类推
+		int[] schoolLevel=new int[]{-1,-1,-1,-1};
+		for (int i = 0; i < xlinfos.size(); i++){
+			String educationDegree=xlinfos.get(i).getEducationDegree();
+			if("博士研究生".equals(educationDegree))schoolLevel[0]=i;
+			if("硕士研究生".equals(educationDegree))schoolLevel[1]=i;
+			if("本科".equals(educationDegree))schoolLevel[2]=i;
+			if("专科".equals(educationDegree))schoolLevel[3]=i;
+		}
+		//比较学历大小，去最高学历,如果数组中第一位不为-1，则表示xlinfos中的学历信息有“博士研究生”
+		for(int i = 0; i < schoolLevel.length; i++){
+			if(schoolLevel[i]!=-1){
+				index=schoolLevel[i];
+				break;
+			}
+		}
+		return index;
+	}
+
+
+	/**
+	 * 查询用户学历数据是否已经存在数据库中
+	 *
+	 * @param name
+	 * @param certId
+	 * @param sqlca
+	 * @return
+	 */
+	private static Map queryDataFromDB(String name, String certId, Transaction sqlca) {
+		logger.info("国政通学历DB查询:name=" + name + ",cerId=" + certId);
+		Map result = new HashMap();
+		String sql = "select * from GZT_DEGREE where USER_NAME=? and IDENTITY_CARD=? order by CREATE_DATE DESC";
+		ResultSet rs = null;
+		try {
+			rs = SqlUtil.getResultSet(sqlca.conn, sql, new String[] { name, certId });
+			if (rs.next()) {
+				result.put("REF_ID", DataConvert.toString(rs.getString("SERIALNO")));
+				result.put("USER_NAME", DataConvert.toString(rs.getString("USER_NAME")));
+				result.put("CONDITION_NO", DataConvert.toString(rs.getString("CONDITION_NO")));
+				result.put("IDENTITY_CARD", DataConvert.toString(rs.getString("IDENTITY_CARD")));
+				result.put("GRADUATE_INSTITUTIONS", DataConvert.toString(rs.getString("GRADUATE_INSTITUTIONS")));
+				result.put("EDUCATION_DEGREE", DataConvert.toString(rs.getString("EDUCATION_DEGREE")));
+				result.put("ENROL_DATE", DataConvert.toString(rs.getString("ENROL_DATE")));
+				result.put("SPECIALITY", DataConvert.toString(rs.getString("SPECIALITY")));
+				result.put("GRADUATE_TIME", DataConvert.toString(rs.getString("GRADUATE_TIME")));
+				result.put("STUDY_RESULT", DataConvert.toString(rs.getString("STUDY_RESULT")));
+				result.put("STUDY_STYLE", DataConvert.toString(rs.getString("STUDY_STYLE")));
+				result.put("FLAG", true);
+				logger.info("国政通学历DB查询:查询到了数据。");
+			}else{
+				result.put("FLAG", false);
+				logger.info("国政通学历DB查询数据库没有查询到数据。");
+			}
+		} catch (Exception e) {
+			result.put("FLAG", false);
+			logger.error("国政通学历DB查询数据库异常:" + e.getMessage());
+		} finally {
+			try {
+				rs.close();
+			} catch (SQLException e) {
+			}
+		}
+		return result;
+
+	}
+
+	private static JSONObject initQueryParam(Map<String, String> queryConditionMap) throws JSONException {
+
+
+
+		JSONObject jsonobj = new JSONObject();
+		JSONArray array = new JSONArray();
+
+		jsonobj.put("USER_NAME", queryConditionMap.get("USER_NAME"));
+		jsonobj.put("PASSWORD", queryConditionMap.get("PASSWORD"));
+		jsonobj.put("QUERY_TYPE", queryConditionMap.get("QUERY_TYPE"));
+		jsonobj.put("SOURCECD", SOURCECD);
+		jsonobj.put("REPORT_TYPE", REPORT_TYPE);
+
+		Map<String, String> mapPeople = new HashMap<String, String>();
+		mapPeople.put("NAME", queryConditionMap.get("NAME"));
+		mapPeople.put("ID_NO", queryConditionMap.get("ID_NO"));
+		mapPeople.put("REF_ID", queryConditionMap.get("REF_ID"));
+		// mapPeople.put("UMNO", "");
+		// mapPeople.put("DEPARTMENT_NO", "");
+		// mapPeople.put("DEPARTMENT_NAME", "");
+		// mapPeople.put("REUSE_DAYS", "-1");
+
+		array.put(mapPeople);
+
+		jsonobj.put("data", array);
+		return jsonobj;
+	}
+
+	private static String callWebServiceInterface(JSONObject jsonobj) throws Exception {
+		Object[] opArgs = new Object[2];
+		opArgs[0] = INTERFACE_ID;
+		opArgs[1] = jsonobj.toString();
+		logger.info("====== 调用webservicef接口开始 ========");
+		byte[] result = axisCall(opArgs);
+		String resultStr = new String(result, "GBK");
+		logger.info("====== 调用webservice接口结束 ========");
+		logger.info("调用webservice接口结果："+resultStr);
+		return resultStr;
+	}
+
+	private static byte[] axisCall(Object[] opArgs) throws Exception {
+		logger.info("国政通学历查询CCF webService参数:");
+		logger.info("国政通学历查询CCF webService参数CCF_SOAP_URL:"+CCF_SOAP_URL);
+		logger.info("国政通学历查询CCF webService参数CCF_SECURITY_USERNAME:"+CCF_SECURITY_USERNAME);
+		logger.info("国政通学历查询CCF webService参数CCF_SECURITY_PASSWORD:"+CCF_SECURITY_PASSWORD);
+		Service service = new Service();
+		Call call = (Call) service.createCall();
+		call.setTargetEndpointAddress(new java.net.URL(CCF_SOAP_URL));// 设置webservice地址
+		call.addParameter("serviceType", XMLType.SOAP_STRING, javax.xml.rpc.ParameterMode.IN);
+		call.addParameter("reqJsonStr", XMLType.SOAP_STRING, javax.xml.rpc.ParameterMode.IN);
+		call.setOperationName(new QName("http://impl.web.biz.webservice.ccf.paic.com", METHOD_NAME));
+
+		call.setReturnType(org.apache.axis.encoding.XMLType.SOAP_BASE64BINARY);// 返回类型
+		call.setUsername(CCF_SECURITY_USERNAME);// 用户名
+		call.setPassword(CCF_SECURITY_PASSWORD);// 密码
+		call.setTimeout(360000);
+
+		byte[] result = (byte[]) call.invoke(opArgs);
+		return result;
+
+	}
+
+
+}
