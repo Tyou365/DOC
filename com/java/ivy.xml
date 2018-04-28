@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
+    <info organisation="com.pingan.finance.risk"
+        module="risk_info"
+        revision="5.2.0">
+	</info>
+	<configurations>	
+		<conf name="default"/> 
+	</configurations>
+	<publications>
+		<artifact name="risk_info" type="jar"/>
+	</publications>
+    <dependencies> 
+    	<dependency org="com.pingan.pafa5" name="pafa-common" rev="5.2.6" />
+        <dependency org="com.pingan.pafa5" name="pizza" rev="5.2.6"  />
+        <dependency org="com.pingan.pafa5" name="papp" rev="5.2.6"  />
+        <dependency org="com.pingan.pafa5" name="fling" rev="5.2.6"  />
+        <dependency org="com.alibaba" name="dubbo" rev="2.4.15" />
+        <dependency org="com.pingan.pafa5" name="pafa5-support" rev="5.2.6"  />
+        <dependency org="com.pingan.pafa5" name="pafa5-dependencies2" rev="5.2.6" />        
+        
+        <dependency org="com.alibaba" name="dubbo" rev="2.4.15" />  
+	    <dependency org="org.mybatis" name="mybatis" rev="3.3.0" />
+	    <dependency org="org.mybatis" name="mybatis-spring" rev="1.2.3" />	  
+		<dependency org="oracle" name="ojdbc6" rev="11.2.0.3.0" />
+		 <!-- RSA加密包 -->
+        <dependency org="org.bouncycastle" name="bcprov-jdk16" rev="1.45"/>       
+        <dependency org="commons-codec" name="commons-codec" rev="1.7"/>
+        
+        <dependency org="io.prometheus" name="simpleclient" rev="0.0.26"/>
+		<dependency org="io.prometheus" name="simpleclient_common" rev="0.0.26"/>
+		<dependency org="io.prometheus" name="simpleclient_hotspot" rev="0.0.26"/>
+		<dependency org="com.pingan.finance.channel.fx" name="fx-agent" rev="0.0.2"/>
+		<dependency org="org.aspectj" name="aspectjweaver" rev="1.7.4"/>
+        <exclude module="uow"/>
+    </dependencies>
+</ivy-module>
