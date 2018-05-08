@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Configuration status="info"> 
+  <Appenders> 
+    <RollingRandomAccessFile name="logFile" fileName="${sys:pafa.log.home}/pafa.log" filePattern="${sys:pafa.log.home}/pafa.log.%d{yyyy-MM-dd}" immediateFlush="false" bufferSize="8192"> 
+      <PatternLayout pattern="[%d{HH:mm:ss.SSS}] [%-3p] %x %c{1}:  %m%n"/>  
+      <Policies> 
+        <TimeBasedTriggeringPolicy interval="1" modulate="true"/> 
+      </Policies> 
+    </RollingRandomAccessFile>  
+    <Async name="Async"> 
+      <AppenderRef ref="logFile"/>  
+      <AppenderRef ref="kafkaAppender"/> 
+    </Async>  
+    <Kafka name="kafkaAppender"> 
+      <Config key="kafka.bootstrap.servers" value="10.14.217.126:9092,10.14.217.127:9092,10.14.217.128:9092"/>
+    </Kafka> 
+  </Appenders>  
+  <Loggers> 
+    <Logger name="com.ibatis" additivity="true" level="DEBUG"/>  
+    <Logger name="java.sql.Connection" level="DEBUG"/>  
+    <Logger name="java.sql.Statement" level="DEBUG"/>  
+    <Logger name="java.sql.PreparedStatement" level="DEBUG"/>  
+    <Logger name="org.apache" level="ERROR"/>  
+    <Logger name="com.paic.pafa" level="INFO"/>  
+    <Logger name="com.pingan.pafa5" level="INFO"/>  
+    <Logger name="org.springframework" level="INFO"/>  
+    <Root level="DEBUG"> 
+      <AppenderRef ref="Async"/> 
+    </Root> 
+  </Loggers> 
