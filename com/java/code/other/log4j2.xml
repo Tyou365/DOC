@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="info">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%d{HH:mm:ss.SSS}] [%-3p] %x %c{1}:  %m%n"/>
+        </Console>
+        <Console name="ConsoleMonitor" target="SYSTEM_OUT">
+            <PatternLayout pattern="%m%n"/>
+        </Console>
+
+        <Async name="Async" bufferSize="128" blocking="false">
+            <AppenderRef ref="kafkaAppender"/>
+        </Async>
+        <Kafka name="kafkaAppender">
+            <Config key="kafka.bootstrap.servers" value="10.14.217.126:9092, 10.14.217.127:9092, 10.14.217.128:9092"/>
+
+            <Config key="topic" value="947444_BLOAN_RCPM"/>
+        </Kafka>
+
+    </Appenders>
+
+    <Loggers>
+        <Logger name="java.sql.Connection" level="ERROR"/>
+        <Logger name="java.sql.Statement" level="ERROR"/>
+        <Logger name="java.sql.PreparedStatement" level="ERROR"/>
+        <Logger name="org.apache" level="INFO"/>
+        <Logger name="com.paic.pafa" level="INFO"/>
+        <Logger name="com.pingan.pafa5" level="INFO"/>
+        <Logger name="com.pingan.rcpm.util.DBUtils" level="INFO"/>
+        <Logger name="org.springframework" level="INFO"/>
+        <Root level="INFO">
+            <AppenderRef ref="Async"/>
+            <AppenderRef ref="Console"/>
+        </Root>
+        <Logger  name="MonitorPoint"  level="INFO"  additivity="false"  >
+            <AppenderRef ref="ConsoleMonitor"/>
+            <AppenderRef ref="Async"/>
+        </Logger>
+    </Loggers>
+</configuration>
