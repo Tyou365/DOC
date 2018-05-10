@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+    </Console>
+    <Async name="Async">
+      <AppenderRef ref="kafkaAppender"/>
+   </Async>
+   <Kafka name="kafkaAppender">
+      <Config key="kafka.bootstrap.servers"
+         value="10.14.217.126:9092,10.14.217.127:9092,10.14.217.128:9092"/>
+      <Config key="topic" value="857446_BLOAN_ICS"/>
+   </Kafka>
+      <RollingFile name="RollingFileInfo" fileName="/bankapp/applogs/rtlog/icspbccrs/info.log"
+                     filePattern="/bankapp/applogs/rtlog/icspbccrs/$${date:yyyy-MM}/info-%d{yyyy-MM-dd}-%i.log.bz2">
+            <Filters>
+                <ThresholdFilter level="INFO"/>
+                <ThresholdFilter level="WARN" onMatch="DENY" onMismatch="NEUTRAL"/>
+            </Filters>
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="200" compressionLevel="9"/>
+        </RollingFile>
+
+        <RollingFile name="RollingFileWarn" fileName="/bankapp/applogs/rtlog/icspbccrs/warn.log"
+                     filePattern="/bankapp/applogs/rtlog/icspbccrs/$${date:yyyy-MM}/warn-%d{yyyy-MM-dd}-%i.log.bz2">
+            <Filters>
+                <ThresholdFilter level="WARN"/>
+                <ThresholdFilter level="ERROR" onMatch="DENY" onMismatch="NEUTRAL"/>
+            </Filters>
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="200" compressionLevel="9"/>
+        </RollingFile>
+
+        <RollingFile name="RollingFileError" fileName="/bankapp/applogs/rtlog/icspbccrs/error.log"
+                     filePattern="/bankapp/applogs/rtlog/icspbccrs/$${date:yyyy-MM}/error-%d{yyyy-MM-dd}-%i.log.bz2">
+            <ThresholdFilter level="ERROR"/>
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="200" compressionLevel="9"/>
+        </RollingFile>
+  </Appenders>
+  <Loggers>
+    <Root level="info" includeLocation="false">
+      <AppenderRef ref="Console" />
+      <!--<AppenderRef ref="Async" />-->
+      <AppenderRef ref="RollingFileInfo"/>
+      <AppenderRef ref="RollingFileWarn"/>
+      <AppenderRef ref="RollingFileError"/>
+    </Root>
+  </Loggers>
+</Configuration>
