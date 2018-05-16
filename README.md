@@ -26,3 +26,6 @@ http://www.mbalib.com/
 
 springboot:
 https://blog.csdn.net/u012702547/article/details/53740047
+
+Netty:
+https://blog.csdn.net/bjweimengshu/article/details/78786315
