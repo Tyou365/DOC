@@ -1,4 +1,4 @@
-package com.pingan.finance.risk.info.common;
+package com.pingan.finance.xyd.entry.common;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
