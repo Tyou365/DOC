@@ -30,3 +30,13 @@ https://blog.csdn.net/u012702547/article/details/53740047
 Netty:
 https://blog.csdn.net/bjweimengshu/article/details/78786315
 https://www.cnblogs.com/applerosa/p/7141684.html
+
+ZHANGXUEQIANG897
+3Wt2D4pv-->新密码：zhangxq001..
+EX_WLJR_ZHANGXUEQ
+平安银行零售网络金融事业部科技中心零售系统规划团队外包管理组
+
+http://amsims.paic.com.cn/amsls/locallogin
+ex_wljr_zhangxueq/zhangxq001..
+
+Online-UAT(10.14.192.133)编码调成gb2312。然后执行export LANG=zh_CN
