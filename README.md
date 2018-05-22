@@ -36,6 +36,8 @@ ZHANGXUEQIANG897
 EX_WLJR_ZHANGXUEQ
 平安银行零售网络金融事业部科技中心零售系统规划团队外包管理组
 
+commons-dbutils-1.5.jar-->QueryRunner(org.apache.commons.dbutils)
+
 http://amsims.paic.com.cn/amsls/locallogin
 ex_wljr_zhangxueq/zhangxq001..
 
