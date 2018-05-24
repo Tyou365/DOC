@@ -1,0 +1,97 @@
+package com.pingan.finance.loan.entry.arch.aop;
+
+import com.pingan.finance.loan.api.provider.protocol.BaseResp;
+import com.pingan.finance.loan.common.constant.CommonEnumeration;
+import com.pingan.finance.loan.common.exception.BasicRuntimeException;
+import com.pingan.finance.loan.common.exception.BizException;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+/**
+ * Filename: ApiAspect
+ *
+ * @copyright: Copyright (c)2018
+ * @company: pab
+ * @author: LIUFENG483
+ * @function:
+ * @version: 1.0
+ * @create at: 2018-05-15 14:56
+ */
+@Component
+@Aspect
+public class ApiAspect {
+
+    @Pointcut("bean(*Controller) && within(com.pingan.finance.loan.entry.*.controller.*)")
+    protected void pointcut() {
+
+    }
+
+    @Around("pointcut()")
+    protected Object around(ProceedingJoinPoint proceedingJoinPoint) {
+        return handlePointCut(proceedingJoinPoint);
+    }
+
+    private final static Logger logger = LoggerFactory.getLogger(ApiAspect.class);
+
+    /**
+     * 基于切面做日志、异常、返回码的统一处理
+     *
+     * @param proceedingJoinPoint
+     * @return
+     */
+    protected Object handlePointCut(ProceedingJoinPoint proceedingJoinPoint) {
+//        // 方法开始时间
+//        long beginTime = System.currentTimeMillis();
+//
+//        // 打印方法入参
+//        // 获取被拦截的类名和方法名
+//        MethodSignature signature = (MethodSignature) proceedingJoinPoint.getSignature();
+//        // 类方法
+//        String classMethodName = signature.getDeclaringTypeName() + "." + signature.getName();
+//        logger.info("请求开始：class_method={}", classMethodName);
+//        // 参数（参数对象需要实现toString方法）
+//        logger.info("请求入参：args={}", proceedingJoinPoint.getArgs());
+        Object result = null;
+        try {
+            result = proceedingJoinPoint.proceed();
+        } catch (Exception ex) {
+            if (ex != null) {
+                // BizException，不可解决定性为错误码返回
+                if (ex instanceof BasicRuntimeException) {
+                    logger.error("[ SubmitException --- ]", ex);
+                    BasicRuntimeException bre = (BasicRuntimeException)ex;
+                    return BaseResp.failedInstance(bre.getErrorCode(), bre.getMessage());
+                }
+                // 获取到Exception，没解决定性为系统异常
+                if (ex instanceof Exception) {
+                    logger.error("[ Exception --- ]", ex);
+                    return BaseResp.failedInstance(CommonEnumeration.CodeMsg.SYSTEM_EXCEPTION);
+                }
+            }
+        } catch (Throwable t) {
+            logger.error("[ Throwable --- ]", t);
+            return BaseResp.failedInstance(CommonEnumeration.CodeMsg.SYSTEM_EXCEPTION);
+        } finally {
+//            logResult(beginTime, classMethodName, result);
+        }
+        return result;
+    }
+
+//    /**
+//     * 记录相关输出的日志信息
+//     *
+//     * @param beginTime
+//     * @param classMethodName
+//     * @param result
+//     */
+//    private void logResult(long beginTime, String classMethodName, Object result) {
+//        logger.info("请求结果：response={}", result.toString());
+//        long costMs = System.currentTimeMillis() - beginTime;
+//        logger.info("请求结束：class_method={}，耗时：{}ms", classMethodName, costMs);
+//    }
+}
